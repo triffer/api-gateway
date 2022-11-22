@@ -3,6 +3,7 @@ package processing_test
 import (
 	"context"
 	"fmt"
+
 	"github.com/go-logr/logr"
 	gatewayv1beta1 "github.com/kyma-incubator/api-gateway/api/v1beta1"
 	"github.com/kyma-incubator/api-gateway/internal/builders"
@@ -59,15 +60,9 @@ var _ = Describe("Reconcile", func() {
 
 	It("should return api status error and vs/ar status skipped when processor reconciliation returns error", func() {
 		// given
-		p := MockReconciliationProcessor{
-			evaluate: func() ([]*processing.ObjectChange, error) {
-				return []*processing.ObjectChange{}, fmt.Errorf("error during processor execution")
-			},
-		}
-
 		cmd := MockReconciliationCommand{
-			validateMock:   func() ([]validation.Failure, error) { return []validation.Failure{}, nil },
-			processorMocks: func() []processing.ReconciliationProcessor { return []processing.ReconciliationProcessor{p} },
+			validateMock:  func() ([]validation.Failure, error) { return []validation.Failure{}, nil },
+			evaluateMocks: func() error { return fmt.Errorf("error during processor execution") },
 		}
 
 		client := fake.NewClientBuilder().Build()
@@ -82,76 +77,14 @@ var _ = Describe("Reconcile", func() {
 		Expect(status.VirtualServiceStatus.Code).To(Equal(gatewayv1beta1.StatusSkipped))
 	})
 
-	It("should return api status error and vs/ar status error because apply action \"something\" is not supported", func() {
-		// given
-		c := []*processing.ObjectChange{{Action: "something", Obj: builders.VirtualService().Get()}}
-		p := MockReconciliationProcessor{
-			evaluate: func() ([]*processing.ObjectChange, error) {
-				return c, nil
-			},
-		}
-
-		cmd := MockReconciliationCommand{
-			validateMock:   func() ([]validation.Failure, error) { return []validation.Failure{}, nil },
-			processorMocks: func() []processing.ReconciliationProcessor { return []processing.ReconciliationProcessor{p} },
-		}
-
-		client := fake.NewClientBuilder().Build()
-
-		// when
-		status := processing.Reconcile(context.TODO(), client, testLogger(), cmd, &gatewayv1beta1.APIRule{})
-
-		// then
-		Expect(status.ApiRuleStatus.Code).To(Equal(gatewayv1beta1.StatusError))
-		Expect(status.ApiRuleStatus.Description).To(Equal("apply action something is not supported"))
-		Expect(status.AccessRuleStatus.Code).To(Equal(gatewayv1beta1.StatusError))
-		Expect(status.VirtualServiceStatus.Code).To(Equal(gatewayv1beta1.StatusError))
-	})
-
-	It("should return api status error and vs/ar status error when error during apply of changes", func() {
-		// given
-		c := []*processing.ObjectChange{{Action: "create", Obj: builders.VirtualService().Get()}}
-		p := MockReconciliationProcessor{
-			evaluate: func() ([]*processing.ObjectChange, error) {
-				return c, nil
-			},
-		}
-
-		cmd := MockReconciliationCommand{
-			validateMock:   func() ([]validation.Failure, error) { return []validation.Failure{}, nil },
-			processorMocks: func() []processing.ReconciliationProcessor { return []processing.ReconciliationProcessor{p} },
-		}
-
-		client := fake.NewClientBuilder().Build()
-
-		// when
-		status := processing.Reconcile(context.TODO(), client, testLogger(), cmd, &gatewayv1beta1.APIRule{})
-
-		// then
-		Expect(status.ApiRuleStatus.Code).To(Equal(gatewayv1beta1.StatusError))
-		Expect(status.ApiRuleStatus.Description).ToNot(BeEmpty())
-		Expect(status.AccessRuleStatus.Code).To(Equal(gatewayv1beta1.StatusError))
-		Expect(status.VirtualServiceStatus.Code).To(Equal(gatewayv1beta1.StatusError))
-	})
-
 	It("should return status ok for create, update and delete", func() {
 		// given
 		toBeUpdatedVs := builders.VirtualService().Name("toBeUpdated").Get()
 		toBeDeletedVs := builders.VirtualService().Name("toBeDeleted").Get()
-		c := []*processing.ObjectChange{
-			{Action: "create", Obj: builders.VirtualService().Name("test").Get()},
-			{Action: "update", Obj: toBeUpdatedVs},
-			{Action: "delete", Obj: toBeDeletedVs},
-		}
-		p := MockReconciliationProcessor{
-			evaluate: func() ([]*processing.ObjectChange, error) {
-				return c, nil
-			},
-		}
 
 		cmd := MockReconciliationCommand{
-			validateMock:   func() ([]validation.Failure, error) { return []validation.Failure{}, nil },
-			processorMocks: func() []processing.ReconciliationProcessor { return []processing.ReconciliationProcessor{p} },
+			validateMock:  func() ([]validation.Failure, error) { return []validation.Failure{}, nil },
+			evaluateMocks: func() error { return nil },
 		}
 
 		scheme := runtime.NewScheme()
@@ -170,16 +103,16 @@ var _ = Describe("Reconcile", func() {
 })
 
 type MockReconciliationCommand struct {
-	validateMock   func() ([]validation.Failure, error)
-	processorMocks func() []processing.ReconciliationProcessor
+	validateMock  func() ([]validation.Failure, error)
+	evaluateMocks func() error
 }
 
 func (r MockReconciliationCommand) Validate(_ context.Context, _ client.Client, _ *gatewayv1beta1.APIRule) ([]validation.Failure, error) {
 	return r.validateMock()
 }
 
-func (r MockReconciliationCommand) GetProcessors() []processing.ReconciliationProcessor {
-	return r.processorMocks()
+func (r MockReconciliationCommand) Evaluate(ctx context.Context, client client.Client, apiRule *gatewayv1beta1.APIRule) error {
+	return r.evaluateMocks()
 }
 
 type MockReconciliationProcessor struct {

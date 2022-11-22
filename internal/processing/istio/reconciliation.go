@@ -10,16 +10,11 @@ import (
 )
 
 type Reconciliation struct {
-	processors []processing.ReconciliationProcessor
 	config     processing.ReconciliationConfig
 }
 
 func NewIstioReconciliation(config processing.ReconciliationConfig) Reconciliation {
-	vsProcessor := NewVirtualService(config)
-
 	return Reconciliation{
-		// Add missing processors for AuthorizationPolicy and RequestAuthentication
-		processors: []processing.ReconciliationProcessor{vsProcessor},
 		config:     config,
 	}
 }
@@ -41,6 +36,10 @@ func (r Reconciliation) Validate(ctx context.Context, client client.Client, apiR
 	return validator.Validate(apiRule, vsList), nil
 }
 
-func (r Reconciliation) GetProcessors() []processing.ReconciliationProcessor {
-	return r.processors
+func (r Reconciliation) Evaluate(ctx context.Context, client client.Client, apiRule *gatewayv1beta1.APIRule) error {
+	vsProcessor := NewVirtualService(r.config)
+
+	processors := []processing.ReconciliationProcessor{vsProcessor}
+
+	return processing.Evaluate(ctx, client, apiRule, processors)
 }

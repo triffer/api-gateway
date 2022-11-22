@@ -2,6 +2,7 @@ package ory
 
 import (
 	"context"
+
 	gatewayv1beta1 "github.com/kyma-incubator/api-gateway/api/v1beta1"
 	"github.com/kyma-incubator/api-gateway/internal/processing"
 	"github.com/kyma-incubator/api-gateway/internal/validation"
@@ -10,17 +11,12 @@ import (
 )
 
 type Reconciliation struct {
-	processors []processing.ReconciliationProcessor
-	config     processing.ReconciliationConfig
+	config processing.ReconciliationConfig
 }
 
 func NewOryReconciliation(config processing.ReconciliationConfig) Reconciliation {
-	vsProcessor := NewVirtualServiceProcessor(config)
-	acProcessor := NewAccessRuleProcessor(config)
-
 	return Reconciliation{
-		processors: []processing.ReconciliationProcessor{vsProcessor, acProcessor},
-		config:     config,
+		config: config,
 	}
 }
 
@@ -40,6 +36,11 @@ func (r Reconciliation) Validate(ctx context.Context, client client.Client, apiR
 	return validator.Validate(apiRule, vsList), nil
 }
 
-func (r Reconciliation) GetProcessors() []processing.ReconciliationProcessor {
-	return r.processors
+func (r Reconciliation) Evaluate(ctx context.Context, client client.Client, apiRule *gatewayv1beta1.APIRule) error {
+	vsProcessor := NewVirtualServiceProcessor(r.config)
+	acProcessor := NewAccessRuleProcessor(r.config)
+
+	processors := []processing.ReconciliationProcessor{vsProcessor, acProcessor}
+
+	return processing.Evaluate(ctx, client, apiRule, processors)
 }

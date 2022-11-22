@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+
 	"github.com/go-logr/logr"
 	gatewayv1beta1 "github.com/kyma-incubator/api-gateway/api/v1beta1"
 	"github.com/kyma-incubator/api-gateway/internal/validation"
@@ -12,7 +13,7 @@ import (
 
 type ReconciliationCommand interface {
 	Validate(context.Context, client.Client, *gatewayv1beta1.APIRule) ([]validation.Failure, error)
-	GetProcessors() []ReconciliationProcessor
+	Evaluate(ctx context.Context, client client.Client, apiRule *gatewayv1beta1.APIRule) error
 }
 
 type ReconciliationProcessor interface {
@@ -34,53 +35,10 @@ func Reconcile(ctx context.Context, client client.Client, log logr.Logger, cmd R
 		return getFailedValidationStatus(validationFailures)
 	}
 
-	for _, processor := range cmd.GetProcessors() {
-
-		objectChanges, err := processor.EvaluateReconciliation(ctx, client, apiRule)
-		if err != nil {
-			return GetStatusForError(log, err, gatewayv1beta1.StatusSkipped)
-		}
-
-		err = applyChanges(ctx, client, objectChanges...)
-		if err != nil {
-			//  "We don't know exactly which object(s) are not updated properly. The safest approach is to assume nothing is correct and just use `StatusError`."
-			return GetStatusForError(log, err, gatewayv1beta1.StatusError)
-		}
-	}
-
-	return getOkStatus()
-}
-
-// applyChanges applies the given commands on the cluster
-func applyChanges(ctx context.Context, client client.Client, changes ...*ObjectChange) error {
-
-	for _, change := range changes {
-		err := applyChange(ctx, client, change)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func applyChange(ctx context.Context, client client.Client, change *ObjectChange) error {
-	var err error
-
-	switch change.Action {
-	case "create":
-		err = client.Create(ctx, change.Obj)
-	case "update":
-		err = client.Update(ctx, change.Obj)
-	case "delete":
-		err = client.Delete(ctx, change.Obj)
-	default:
-		err = fmt.Errorf("apply action %s is not supported", change.Action)
-	}
-
+	err = cmd.Evaluate(ctx, client, apiRule)
 	if err != nil {
-		return err
+		return GetStatusForError(log, err, gatewayv1beta1.StatusSkipped)
 	}
-
-	return nil
+	
+	return getOkStatus()
 }
