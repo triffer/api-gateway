@@ -1,28 +1,31 @@
 package ory
 
 import (
-	"context"
-	"github.com/go-logr/logr"
 	gatewayv1beta1 "github.com/kyma-incubator/api-gateway/api/v1beta1"
 	"github.com/kyma-incubator/api-gateway/internal/processing"
 	"github.com/kyma-incubator/api-gateway/internal/validation"
 	networkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type Reconciliation struct {
-	processors []processing.ReconciliationProcessor
-	config     processing.ReconciliationConfig
+	config *processing.ReconciliationConfig
 }
 
-func NewOryReconciliation(config processing.ReconciliationConfig) Reconciliation {
+func NewOryReconciliation(config processing.ReconciliationConfig) processing.GenericReconciler {
 	vsProcessor := NewVirtualServiceProcessor(config)
 	acProcessor := NewAccessRuleProcessor(config)
 
-	return Reconciliation{
-		processors: []processing.ReconciliationProcessor{vsProcessor, acProcessor},
-		config:     config,
+	oryCommand := Reconciliation{
+		config: &config,
 	}
+
+	return processing.NewGenericReconciler(
+		oryCommand,
+		config.Logger,
+		config.Ctx,
+		config.Client,
+		[]processing.ReconciliationProcessor{vsProcessor, acProcessor},
+	)
 }
 
 func (r Reconciliation) Validate(apiRule *gatewayv1beta1.APIRule) ([]validation.Failure, error) {
@@ -39,20 +42,4 @@ func (r Reconciliation) Validate(apiRule *gatewayv1beta1.APIRule) ([]validation.
 		DefaultDomainName: r.config.DefaultDomainName,
 	}
 	return validator.Validate(apiRule, vsList), nil
-}
-
-func (r Reconciliation) GetLogger() logr.Logger {
-	return r.config.Logger
-}
-
-func (r Reconciliation) GetContext() context.Context {
-	return r.config.Ctx
-}
-
-func (r Reconciliation) GetClient() client.Client {
-	return r.config.Client
-}
-
-func (r Reconciliation) GetProcessors() []processing.ReconciliationProcessor {
-	return r.processors
 }

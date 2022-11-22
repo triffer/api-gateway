@@ -2,6 +2,7 @@ package processing
 
 import (
 	"fmt"
+
 	"github.com/go-logr/logr"
 	gatewayv1beta1 "github.com/kyma-incubator/api-gateway/api/v1beta1"
 	"github.com/kyma-incubator/api-gateway/internal/validation"
@@ -32,7 +33,7 @@ func getOkStatus() ReconciliationStatus {
 }
 
 // GetStatusForError creates a status with APIRule status in error condition. Accepts an auxiliary status code that is used to report VirtualService and AccessRule status.
-func GetStatusForError(log logr.Logger, err error, statusCode gatewayv1beta1.StatusCode) ReconciliationStatus {
+func GetStatusForError(log *logr.Logger, err error, statusCode gatewayv1beta1.StatusCode) ReconciliationStatus {
 	log.Error(err, "Error during reconciliation")
 	return ReconciliationStatus{
 		ApiRuleStatus: generateErrorStatus(err),

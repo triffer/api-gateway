@@ -91,7 +91,7 @@ func (r *APIRuleReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 		cmd := getReconciliation(c)
 
-		status := processing.Reconcile(cmd, apiRule)
+		status := cmd.Reconcile(apiRule)
 
 		return r.updateStatusOrRetry(ctx, apiRule, status)
 	}
@@ -99,7 +99,7 @@ func (r *APIRuleReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	return doneReconcile()
 }
 
-func getReconciliation(config processing.ReconciliationConfig) processing.ReconciliationCommand {
+func getReconciliation(config processing.ReconciliationConfig) processing.GenericReconciler {
 	// This should be replaced by the feature flag handling to return the appropriate reconciliation.
 	return ory.NewOryReconciliation(config)
 }
