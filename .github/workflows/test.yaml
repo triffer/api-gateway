@@ -31,7 +31,6 @@ jobs:
       - name: Get SHA from latest run of main integration triggered by push
         id: get-sha
         uses: actions/github-script@v6
-        if: ${{ github.event_name != 'schedule' }}
         with:
           script: |
             if (context.eventName !== 'schedule') {
@@ -61,7 +60,6 @@ jobs:
     name: Integration tests
     runs-on: ubuntu-latest
     needs: [get-sha]
-    if: ${{ always() && !failure() && !cancelled() }}
     steps:
       - name: test
         id: test
