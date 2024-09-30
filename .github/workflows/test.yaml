@@ -61,7 +61,8 @@ jobs:
     name: Integration tests
     runs-on: ubuntu-latest
     needs: [get-sha]
+    if: ${{ success() }}
     steps:
-      - name: build
-        id: build
-        run: echo "test"
+      - name: test
+        id: test
+        run: echo "test ${{ needs.get-sha.outputs.sha }}"
