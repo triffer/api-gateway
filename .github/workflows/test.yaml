@@ -23,8 +23,8 @@ jobs:
     name: Get SHA
     runs-on: ubuntu-latest
     needs: [build]
-    # This job must run also when the build job is skipped
-    if: ${{ always() && needs.build.result == 'skipped' }}
+    # The additional if is required, because the required build job is optional
+    if: ${{ always() && !failure() && !cancelled() }}
     outputs:
       sha: ${{ steps.get-sha.outputs.sha }}
     steps:
@@ -61,7 +61,7 @@ jobs:
     name: Integration tests
     runs-on: ubuntu-latest
     needs: [get-sha]
-    if: ${{ always() && success() }}
+    if: ${{ always() && !failure() && !cancelled() }}
     steps:
       - name: test
         id: test
