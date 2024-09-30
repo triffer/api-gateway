@@ -10,19 +10,19 @@ on:
 
 
 jobs:
-  build:
-    name: build image
-    runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'schedule' }}
-    steps:
-      - name: build
-        id: build
-        run: echo "build"
+#  build:
+#    name: build image
+#    runs-on: ubuntu-latest
+#    if: ${{ github.event_name == 'schedule' }}
+#    steps:
+#      - name: build
+#        id: build
+#        run: echo "build"
 
   get-sha:
     name: Get SHA
     runs-on: ubuntu-latest
-    needs: [build]
+#    needs: [build]
     # The additional if is required, because the required build job is optional
     if: ${{ always() && !failure() && !cancelled() }}
     outputs:
