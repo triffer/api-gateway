@@ -12,6 +12,7 @@ on:
 jobs:
   build:
     name: build image
+    runs-on: ubuntu-latest
     if: ${{ github.event_name == 'schedule' }}
     steps:
       - name: build
