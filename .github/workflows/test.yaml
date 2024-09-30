@@ -61,7 +61,7 @@ jobs:
     name: Integration tests
     runs-on: ubuntu-latest
     needs: [get-sha]
-    if: ${{ success() }}
+    if: ${{ always() && success() }}
     steps:
       - name: test
         id: test
