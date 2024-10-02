@@ -1,0 +1,12 @@
+configMapGenerator:
+  - name: apirule-v2alpha1-ui.operator.kyma-project.io
+    namespace: kyma-system
+    files:
+      - general
+      - details
+    options:
+      disableNameSuffixHash: true
+      labels:
+        app.kubernetes.io/component: operator
+        busola.io/extension: resource
+        busola.io/extension-version: "0.5"

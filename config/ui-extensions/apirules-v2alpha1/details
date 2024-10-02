@@ -1,0 +1,11 @@
+header:
+  - name: status
+    widget: Badge
+    highlights:
+      positive:
+        - 'Ready'
+      negative:
+        - 'Error'
+      critical:
+        - 'Warning'
+    source: 'status.state ? status.state : "UNKNOWN"'
